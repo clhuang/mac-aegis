@@ -58,7 +58,7 @@ export class GUI {
       if (password == null) return;
       await this.otpGenerator.unlock(password);
       this.buildMenu();
-    } catch (err) {
+    } catch (err: any) {
       if (err instanceof InvalidSecretsPathError) {
         if (!await this.setSecretsPath()) return;
       } else {
@@ -77,7 +77,7 @@ export class GUI {
     try {
       await this.secretsFileProvider.loadSecrets();
       this.otpGenerator.lock();
-    } catch (err) {
+    } catch (err: any) {
       dialog.showErrorBox("Load failed", err.message);
     }
     this.buildMenu();
@@ -97,7 +97,7 @@ export class GUI {
   private async authenticateAndCopyOtp(service: ServiceInformation) {
     try {
       await promptTouchID({reason: "generate a TOTP"});
-    } catch (err) {
+    } catch (err: any) {
       dialog.showErrorBox("Touch ID authentication failed", err.message);
     }
     await this.copyOtp(service);
@@ -110,7 +110,7 @@ export class GUI {
       if (remainingMs < 5000) {
         setTimeout(() => this.copyOtp(service), remainingMs + 100);
       }
-    } catch (err) {
+    } catch (err: any) {
       dialog.showErrorBox("OTP generation failed", err.message);
     }
   }

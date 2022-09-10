@@ -1,5 +1,6 @@
 import * as ElectronStore from "electron-store";
-const fs = require("fs");
+import fs from 'fs';
+import { IEncryptedBackup } from "./types";
 
 export class InvalidSecretsPathError extends Error {
   constructor() {
@@ -8,42 +9,30 @@ export class InvalidSecretsPathError extends Error {
 }
 
 export class SecretsFileProvider {
-  private secrets: Buffer;
+  private secrets: IEncryptedBackup;
   constructor(private store: ElectronStore) {
   }
 
   hasValidSecretsPath(): boolean {
-    const secretsPath = this.store.get("secrets-path");
+    const secretsPath = this.store.get("secrets-path") as string;
     if (secretsPath == null) return false;
     return fs.existsSync(secretsPath);
   }
 
-  setSecretsPath(path): void {
+  setSecretsPath(path: string): void {
     this.store.set("secrets-path", path);
     this.secrets = null;
   }
 
   async loadSecrets() {
-    const secretsPath = this.store.get("secrets-path");
+    const secretsPath = this.store.get("secrets-path") as string;
     if (secretsPath == null) {
       throw new InvalidSecretsPathError();
     }
-    this.secrets = await this.readFileContents(secretsPath);
+    this.secrets = JSON.parse(await fs.promises.readFile(secretsPath, 'utf8'));
   }
 
-  private async readFileContents(filename): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      fs.readFile(filename, (err, data) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(data);
-        }
-      });
-    })
-  }
-
-  getBuffer() {
+  getContents() {
     return this.secrets;
   }
 }

@@ -1,58 +1,54 @@
 import * as crypto from "crypto";
+import { IContent, IEncryptedBackup, IKeyParams } from "./types";
 
-export async function decrypt(password, buffer) {
-    try {
-        const {iterations, salt, iv, payload} = parseBackupFile(buffer.buffer)
-        const key = await deriveKey(password, iterations, salt);
-        const plainText = decryptPayload(payload, key, iv);
-        return plainText;
-    } catch (err) {
-        throw new Error(`Failed to decrypt: ${err.message}`);
+export async function decrypt(password: string, backup: IEncryptedBackup): Promise<IContent> {
+  try {
+    const backupInfo = parseBackupFile(backup)
+    const key = await deriveKey(password, backupInfo.n, backupInfo.r, backupInfo.p, backupInfo.salt);
+    const masterKey = decryptMasterKey(key, backupInfo.key, backupInfo.slotKeyParams);
+    const plainText = decryptPayload(backupInfo.payload, masterKey, backupInfo.keyParams);
+    return JSON.parse(plainText.toString());
+  } catch (err: any) {
+    throw new Error(`Failed to decrypt: ${err.message}`);
+  }
+}
+
+function parseBackupFile(backup: IEncryptedBackup) {
+  const slot = (() => {
+    for (const slot of backup.header.slots) {
+      if (slot.type === 2) return slot;
     }
+    throw new Error('No password-encrypted slot found');
+  })();
+
+  return {
+    n: slot.n,
+    r: slot.r,
+    p: slot.p,
+    salt: Buffer.from(slot.salt, 'hex'),
+    key: Buffer.from(slot.key, 'hex'),
+    slotKeyParams: slot.key_params,
+    keyParams: backup.header.params,
+    payload: Buffer.from(backup.db, 'hex'),
+  };
 }
 
-function parseBackupFile(arrayBuffer) {
-    const int_length = 4;
-    const salt_length = 12;
-    const iv_length = 12;
-
-    const iterBuffer = arrayBuffer.slice(0, int_length);
-    // Javas ByteBuffer is Big Endian by default
-    const iterations = new DataView(iterBuffer).getInt32(0, false);
-
-    const salt = arrayBuffer.slice(int_length, int_length + salt_length);
-    const iv = arrayBuffer.slice(int_length + salt_length, int_length + salt_length + iv_length);
-    const payload = arrayBuffer.slice(int_length + salt_length + iv_length);
-
-    return {
-        iterations,
-        salt: Buffer.from(salt),
-        iv: Buffer.from(iv),
-        payload: Buffer.from(payload)
-    };
+function deriveKey(password: string, n: number, r: number, p: number, salt: Buffer) {
+  return new Promise<Buffer>((res, rej) => {
+    crypto.scrypt(password, salt, 32, { N: n, r, p }, (err, result) => 
+      err ? rej(err) : res(result)
+    );
+  });
 }
 
-function deriveKey(password, iterations, salt) {
-    return new Promise((resolve, reject) => {
-        crypto.pbkdf2(password, salt, iterations, 32, "sha1", (err, derivedKey) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(derivedKey);
-            }
-        });
-    })
+function decryptMasterKey(derivedKey: Buffer, encryptedKey: Buffer, keyParams: IKeyParams) {
+  const decrypt = crypto.createDecipheriv("aes-256-gcm", derivedKey, Buffer.from(keyParams.nonce, 'hex'));
+  decrypt.setAuthTag(Buffer.from(keyParams.tag, 'hex'));
+  return Buffer.concat([decrypt.update(encryptedKey), decrypt.final()]);
 }
 
-function decryptPayload(payload, key, iv) {
-    let decipher = crypto.createDecipheriv('AES-256-GCM', key, iv);
-    // @ts-ignore
-    decipher.setAuthTag(payload.slice(-16));
-
-    let output = Buffer.concat([
-        decipher.update(payload.slice(0, -16)),
-        decipher.final()
-    ]);
-
-    return output.toString();
+function decryptPayload(payload: Buffer, masterKey: Buffer, keyParams: IKeyParams) {
+  const decrypt = crypto.createDecipheriv("aes-256-gcm", masterKey, Buffer.from(keyParams.nonce, 'hex'));
+  decrypt.setAuthTag(Buffer.from(keyParams.tag, 'hex'));
+  return Buffer.concat([decrypt.update(payload), decrypt.final()]);
 }

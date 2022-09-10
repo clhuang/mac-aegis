@@ -1,20 +1,12 @@
 import {SecretsFileProvider} from "./secrets-file-provider";
 import { decrypt } from "./decrypt";
 import totp from "totp-generator";
+import { IContent } from "./types";
 
 export interface ServiceInformation {
   issuer: string;
   label: string;
   thumbnail: string,
-}
-
-export interface ServiceSecretInformation extends ServiceInformation {
-  secret: string,
-  digits: number,
-  type: string,
-  algorithm: string,
-  period: number,
-  tags: string[]
 }
 
 export interface Otp {
@@ -23,13 +15,13 @@ export interface Otp {
 }
 
 export class OtpGenerator {
-  private services: ServiceSecretInformation[] = null;
+  private services: IContent = null;
 
   constructor(private secretsFileProvider: SecretsFileProvider) {
   }
 
   async unlock(password: string): Promise<void> {
-    this.services = JSON.parse(await decrypt(password, this.secretsFileProvider.getBuffer()));
+    this.services = await decrypt(password, this.secretsFileProvider.getContents());
   }
 
   lock(): void {
@@ -47,39 +39,43 @@ export class OtpGenerator {
     //   {label: "example@gmail.com", issuer: "Google", thumbnail: ""},
     //   {label: "example@gmail.com", issuer: "Amazon", thumbnail: ""},
     // ];
-    return this.services.map(s => ({
+    return this.services.entries.map(s => ({
       issuer: s.issuer,
-      label: s.label,
-      thumbnail: s.thumbnail
+      label: s.name,
+      thumbnail: s.icon
     }));
   }
 
-  async generateOTP(issuer, label): Promise<Otp> {
-    const service = this.services.find(s => s.issuer === issuer && s.label === label);
+  async generateOTP(issuer: string, label: string): Promise<Otp> {
+    const service = this.services.entries.find(s => s.issuer === issuer && s.name === label);
     if (service == null) {
       throw new Error("Service not found");
     }
 
-    const otp = totp(service.secret, {
-      digits: service.digits,
-      algorithm: this.translateHashAlgorithm(service.algorithm),
-      period: service.period
+    const period = service.info.period ?? 30;
+
+    const otp = totp(service.info.secret, {
+      digits: service.info.digits,
+      algorithm: this.translateHashAlgorithm(service.info.algo),
+      period,
     });
     return {
       otp,
-      remainingMs: this.expiresIn(service)
+      remainingMs: this.expiresIn(period)
     };
   }
 
-  private translateHashAlgorithm(andOtpFormat: string): string {
-    if (andOtpFormat === "SHA1") {
-      return "SHA-1";
+  private translateHashAlgorithm(format: string = "SHA-1"): string {
+    switch (format) {
+      case "SHA1": return "SHA-1";
+      case "SHA256": return "SHA-256";
+      case "SHA512": return "SHA-512";
+      default: return format;
     }
-    return andOtpFormat;
   }
 
-  private expiresIn(service: ServiceSecretInformation): number {
-    const periodMs = (service.period ?? 30) * 1000;
+  private expiresIn(period: number): number {
+    const periodMs = period * 1000;
     const epoch = Date.now();
     const elapsed = epoch % periodMs;
     const remaining = periodMs - elapsed;

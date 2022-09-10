@@ -13,6 +13,7 @@
   "author": "Lorenzo Silvestri",
   "license": "GPLV3",
   "dependencies": {
+    "@types/totp-generator": "^0.0.4",
     "electron-store": "^7.0.2",
     "node-mac-auth": "^1.0.0",
     "read": "^1.0.7",
