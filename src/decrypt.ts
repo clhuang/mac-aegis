@@ -5,35 +5,31 @@ export async function decrypt(
   password: string,
   backup: IEncryptedBackup
 ): Promise<IContent> {
-  try {
-    const backupInfo = parseBackupFile(backup);
-    const key = await deriveKey(
-      password,
-      backupInfo.n,
-      backupInfo.r,
-      backupInfo.p,
-      backupInfo.salt
-    );
-    const masterKey = decryptMasterKey(
-      key,
-      backupInfo.key,
-      backupInfo.slotKeyParams
-    );
-    const plainText = decryptPayload(
-      backupInfo.payload,
-      masterKey,
-      backupInfo.keyParams
-    );
-    return JSON.parse(plainText.toString());
-  } catch (err: any) {
-    throw new Error(`Failed to decrypt: ${err.message}`);
-  }
+  const backupInfo = parseBackupFile(backup);
+  const key = await deriveKey(
+    password,
+    backupInfo.n,
+    backupInfo.r,
+    backupInfo.p,
+    backupInfo.salt
+  );
+  const masterKey = decryptMasterKey(
+    key,
+    backupInfo.key,
+    backupInfo.slotKeyParams
+  );
+  const plainText = decryptPayload(
+    backupInfo.payload,
+    masterKey,
+    backupInfo.keyParams
+  );
+  return JSON.parse(plainText.toString());
 }
 
 function parseBackupFile(backup: IEncryptedBackup) {
   const slot = (() => {
     for (const slot of backup.header.slots) {
-      if (slot.type === 2) return slot;
+      if (slot.type === 1) return slot;
     }
     throw new Error("No password-encrypted slot found");
   })();
@@ -46,7 +42,7 @@ function parseBackupFile(backup: IEncryptedBackup) {
     key: Buffer.from(slot.key, "hex"),
     slotKeyParams: slot.key_params,
     keyParams: backup.header.params,
-    payload: Buffer.from(backup.db, "hex"),
+    payload: Buffer.from(backup.db, "base64"),
   };
 }
 
@@ -58,8 +54,12 @@ function deriveKey(
   salt: Buffer
 ) {
   return new Promise<Buffer>((res, rej) => {
-    crypto.scrypt(password, salt, 32, { N: n, r, p }, (err, result) =>
-      err ? rej(err) : res(result)
+    crypto.scrypt(
+      password,
+      salt,
+      32,
+      { N: n, r, p, maxmem: 256 * n * r },
+      (err, result) => (err ? rej(err) : res(result))
     );
   });
 }
