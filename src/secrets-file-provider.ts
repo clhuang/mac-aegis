@@ -1,5 +1,5 @@
 import * as ElectronStore from "electron-store";
-import fs from 'fs';
+import fs from "fs";
 import { IEncryptedBackup } from "./types";
 
 export class InvalidSecretsPathError extends Error {
@@ -10,8 +10,7 @@ export class InvalidSecretsPathError extends Error {
 
 export class SecretsFileProvider {
   private secrets: IEncryptedBackup;
-  constructor(private store: ElectronStore) {
-  }
+  constructor(private store: ElectronStore) {}
 
   hasValidSecretsPath(): boolean {
     const secretsPath = this.store.get("secrets-path") as string;
@@ -29,7 +28,7 @@ export class SecretsFileProvider {
     if (secretsPath == null) {
       throw new InvalidSecretsPathError();
     }
-    this.secrets = JSON.parse(await fs.promises.readFile(secretsPath, 'utf8'));
+    this.secrets = JSON.parse(await fs.promises.readFile(secretsPath, "utf8"));
   }
 
   getContents() {

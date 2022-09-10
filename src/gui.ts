@@ -1,17 +1,29 @@
-import { app, App, clipboard, dialog, Menu, MenuItemConstructorOptions, Tray } from "electron";
+import {
+  app,
+  App,
+  clipboard,
+  dialog,
+  Menu,
+  MenuItemConstructorOptions,
+  Tray,
+} from "electron";
 import path from "path";
 import { OtpGenerator, ServiceInformation } from "./otp-generator";
-import { InvalidSecretsPathError, SecretsFileProvider } from "./secrets-file-provider";
+import {
+  InvalidSecretsPathError,
+  SecretsFileProvider,
+} from "./secrets-file-provider";
 import { PasswordDialog } from "./password-dialog";
 import { canPromptTouchID, promptTouchID } from "node-mac-auth";
 
 export class GUI {
   private tray: Tray;
 
-  constructor(private readonly app: App,
-              private readonly otpGenerator: OtpGenerator,
-              private readonly secretsFileProvider: SecretsFileProvider) {
-  }
+  constructor(
+    private readonly app: App,
+    private readonly otpGenerator: OtpGenerator,
+    private readonly secretsFileProvider: SecretsFileProvider
+  ) {}
 
   init() {
     this.tray = new Tray(path.join(__dirname, "../assets/tray-icon/tray.png"));
@@ -23,10 +35,12 @@ export class GUI {
     const items: MenuItemConstructorOptions[] = [];
 
     if (this.otpGenerator.isUnlocked()) {
-      items.push(...this.otpGenerator.listServices().map(s => ({
-        label: `${s.issuer} – ${s.label}`,
-        click: () => this.authenticateAndCopyOtp(s)
-      })));
+      items.push(
+        ...this.otpGenerator.listServices().map((s) => ({
+          label: `${s.issuer} – ${s.label}`,
+          click: () => this.authenticateAndCopyOtp(s),
+        }))
+      );
     } else {
       items.push(
         { label: "2FA locked", enabled: false },
@@ -37,9 +51,15 @@ export class GUI {
     items.push({ type: "separator" });
 
     if (this.secretsFileProvider.hasValidSecretsPath()) {
-      items.push({ label: "Forget secrets path", click: () => this.clearSecretsPath() });
+      items.push({
+        label: "Forget secrets path",
+        click: () => this.clearSecretsPath(),
+      });
     } else {
-      items.push( { label: "Set secrets path...", click: () => this.setSecretsPath() });
+      items.push({
+        label: "Set secrets path...",
+        click: () => this.setSecretsPath(),
+      });
     }
 
     items.push({ label: "Quit", type: "normal", click: () => this.quit() });
@@ -60,7 +80,7 @@ export class GUI {
       this.buildMenu();
     } catch (err: any) {
       if (err instanceof InvalidSecretsPathError) {
-        if (!await this.setSecretsPath()) return;
+        if (!(await this.setSecretsPath())) return;
       } else {
         dialog.showErrorBox("Unlock failed", err.message);
       }
@@ -69,7 +89,10 @@ export class GUI {
 
   private async setSecretsPath(): Promise<boolean> {
     console.log("setting path");
-    const path = await dialog.showOpenDialog({title: "Choose a secrets file", properties: ['openFile']});
+    const path = await dialog.showOpenDialog({
+      title: "Choose a secrets file",
+      properties: ["openFile"],
+    });
     if (path.canceled) {
       return false;
     }
@@ -96,7 +119,7 @@ export class GUI {
 
   private async authenticateAndCopyOtp(service: ServiceInformation) {
     try {
-      await promptTouchID({reason: "generate a TOTP"});
+      await promptTouchID({ reason: "generate a TOTP" });
     } catch (err: any) {
       dialog.showErrorBox("Touch ID authentication failed", err.message);
     }
@@ -105,7 +128,10 @@ export class GUI {
 
   private async copyOtp(service: ServiceInformation) {
     try {
-      const {otp, remainingMs} = await this.otpGenerator.generateOTP(service.issuer, service.label);
+      const { otp, remainingMs } = await this.otpGenerator.generateOTP(
+        service.issuer,
+        service.label
+      );
       clipboard.writeText(otp);
       if (remainingMs < 5000) {
         setTimeout(() => this.copyOtp(service), remainingMs + 100);

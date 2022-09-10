@@ -16,6 +16,7 @@
     "@types/totp-generator": "^0.0.4",
     "electron-store": "^7.0.2",
     "node-mac-auth": "^1.0.0",
+    "prettier": "^2.7.1",
     "read": "^1.0.7",
     "totp-generator": "^0.0.9"
   },

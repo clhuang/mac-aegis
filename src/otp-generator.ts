@@ -1,4 +1,4 @@
-import {SecretsFileProvider} from "./secrets-file-provider";
+import { SecretsFileProvider } from "./secrets-file-provider";
 import { decrypt } from "./decrypt";
 import totp from "totp-generator";
 import { IContent } from "./types";
@@ -6,7 +6,7 @@ import { IContent } from "./types";
 export interface ServiceInformation {
   issuer: string;
   label: string;
-  thumbnail: string,
+  thumbnail: string;
 }
 
 export interface Otp {
@@ -17,11 +17,13 @@ export interface Otp {
 export class OtpGenerator {
   private services: IContent = null;
 
-  constructor(private secretsFileProvider: SecretsFileProvider) {
-  }
+  constructor(private secretsFileProvider: SecretsFileProvider) {}
 
   async unlock(password: string): Promise<void> {
-    this.services = await decrypt(password, this.secretsFileProvider.getContents());
+    this.services = await decrypt(
+      password,
+      this.secretsFileProvider.getContents()
+    );
   }
 
   lock(): void {
@@ -39,15 +41,17 @@ export class OtpGenerator {
     //   {label: "example@gmail.com", issuer: "Google", thumbnail: ""},
     //   {label: "example@gmail.com", issuer: "Amazon", thumbnail: ""},
     // ];
-    return this.services.entries.map(s => ({
+    return this.services.entries.map((s) => ({
       issuer: s.issuer,
       label: s.name,
-      thumbnail: s.icon
+      thumbnail: s.icon,
     }));
   }
 
   async generateOTP(issuer: string, label: string): Promise<Otp> {
-    const service = this.services.entries.find(s => s.issuer === issuer && s.name === label);
+    const service = this.services.entries.find(
+      (s) => s.issuer === issuer && s.name === label
+    );
     if (service == null) {
       throw new Error("Service not found");
     }
@@ -61,16 +65,20 @@ export class OtpGenerator {
     });
     return {
       otp,
-      remainingMs: this.expiresIn(period)
+      remainingMs: this.expiresIn(period),
     };
   }
 
   private translateHashAlgorithm(format: string = "SHA-1"): string {
     switch (format) {
-      case "SHA1": return "SHA-1";
-      case "SHA256": return "SHA-256";
-      case "SHA512": return "SHA-512";
-      default: return format;
+      case "SHA1":
+        return "SHA-1";
+      case "SHA256":
+        return "SHA-256";
+      case "SHA512":
+        return "SHA-512";
+      default:
+        return format;
     }
   }
 
