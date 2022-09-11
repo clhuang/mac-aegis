@@ -10,7 +10,7 @@
     "package": "electron-builder --dir",
     "release": "npm run clean && npm run build && npm run package"
   },
-  "author": "Lorenzo Silvestri",
+  "author": "Calvin Huang, Lorenzo Silvestri",
   "license": "GPLV3",
   "dependencies": {
     "electron-store": "^7.0.2",
