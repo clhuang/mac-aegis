@@ -13,21 +13,21 @@
   "author": "Lorenzo Silvestri",
   "license": "GPLV3",
   "dependencies": {
-    "@types/prompts": "^2.0.14",
-    "@types/totp-generator": "^0.0.4",
     "electron-store": "^7.0.2",
     "node-mac-auth": "^1.0.0",
     "prompts": "^2.4.2",
     "totp-generator": "^0.0.9"
   },
   "devDependencies": {
+    "@types/prompts": "^2.0.14",
+    "@types/totp-generator": "^0.0.4",
     "electron": "^12.0.1",
     "electron-builder": "^22.10.5",
     "prettier": "^2.7.1",
     "typescript": "^4.2.3"
   },
   "build": {
-    "appId": "io.silvestri.mac2fa",
+    "appId": "io.clhuang.mac-aegis",
     "icon": "assets/app-icon.icns",
     "npmRebuild": false,
     "directories": {
