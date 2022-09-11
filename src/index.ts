@@ -4,6 +4,8 @@ import { SecretsFileProvider } from "./secrets-file-provider";
 import { OtpGenerator } from "./otp-generator";
 import ElectronStore from "electron-store";
 
+app.dock.hide();
+
 const secretsFileProvider = new SecretsFileProvider(new ElectronStore());
 const otpGenerator = new OtpGenerator(secretsFileProvider);
 
