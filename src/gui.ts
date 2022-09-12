@@ -38,6 +38,13 @@ export class GUI {
 
     if (this.otpGenerator.isUnlocked()) {
       items.push(
+        { label: "2FA unlocked", enabled: false },
+        { label: "Lock...", click: () => this.lock() },
+        { type: "separator" },
+        ...this.otpGenerator.listServices().map((s) => ({
+          label: `${s.issuer} – ${s.label}`,
+          click: () => this.authenticateAndCopyOtp(s),
+        })),
         ...this.otpGenerator.listServices().map((s) => ({
           label: `${s.issuer} – ${s.label}`,
           click: () => this.authenticateAndCopyOtp(s),
@@ -87,6 +94,11 @@ export class GUI {
         dialog.showErrorBox("Unlock failed", err.message);
       }
     }
+  }
+
+  private async lock() {
+    this.otpGenerator.lock();
+    this.buildMenu();
   }
 
   private async setSecretsPath(): Promise<boolean> {
