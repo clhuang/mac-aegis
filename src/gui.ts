@@ -44,10 +44,6 @@ export class GUI {
         ...this.otpGenerator.listServices().map((s) => ({
           label: `${s.issuer} – ${s.label}`,
           click: () => this.authenticateAndCopyOtp(s),
-        })),
-        ...this.otpGenerator.listServices().map((s) => ({
-          label: `${s.issuer} – ${s.label}`,
-          click: () => this.authenticateAndCopyOtp(s),
         }))
       );
     } else {

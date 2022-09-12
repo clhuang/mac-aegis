@@ -1,6 +1,6 @@
 import { SecretsFileProvider } from "./secrets-file-provider";
 import { IEncryptedBackup } from "./types";
-import { fork } from "child_process";
+import { Worker } from "worker_threads";
 import path from "path";
 import crypto from "crypto";
 
@@ -44,16 +44,16 @@ export type WorkerResponse = IWorkerInitResponse | IWorkerGenOTPResponse;
 async function runWorkerJob(job: IWorkerInit): Promise<IWorkerInitResponse>;
 async function runWorkerJob(job: IWorkerGenOTP): Promise<IWorkerGenOTPResponse>;
 async function runWorkerJob(job: WorkerJob): Promise<WorkerResponse> {
-  const worker = fork("./otp-generator-v2.js", {
-    execArgv: [JSON.stringify(job)],
-    silent: true,
+  const worker = new Worker(path.resolve(__dirname, "./otp-generator-v2.js"), {
+    workerData: job,
   });
-  const p = new Promise((resolve, reject) => {
+  const p = new Promise<WorkerResponse>((resolve, reject) => {
     worker.addListener("message", resolve);
     worker.addListener("error", reject);
     worker.addListener("messageerror", reject);
   });
-  return p as any;
+  p.finally(() => worker.terminate());
+  return p;
 }
 
 export class OtpGenerator {
