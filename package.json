@@ -1,5 +1,5 @@
 {
-  "name": "mac2fa",
+  "name": "mac-aegis",
   "version": "1.0.0",
   "description": "2FA TOTP generator for macOS",
   "main": "dist/index.js",
