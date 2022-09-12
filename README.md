@@ -1,6 +1,6 @@
-# mac2fa
+# mac-aegis
 
-Electron app for macOS which can read your [andOTP](https://github.com/andOTP/andOTP) backup file
+Electron app for macOS which can read your [Aegis](https://github.com/beemdevelopment/Aegis) backup file
 and produce TOTP codes from the system tray.
 
 ![](img/locked.png) ![](img/unlocked.png) ![](img/touchid.png)
@@ -8,7 +8,7 @@ and produce TOTP codes from the system tray.
 #### Security warning
 
 This app is a compromise between security and convenience. The secrets are encrypted
-at rest in andOTP's **.json.aes** file format, and require a password to decrypt
+at rest in Aegis's file format, and require a password to decrypt
 when the app first starts. After that, they remain in plain text in the program's memory.
 The app asks for Touch ID before generating any OTPs, but this can probably be bypassed
 by a determined attacker because it doesn't actually store any secret in the secure enclave.
