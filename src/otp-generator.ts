@@ -2,6 +2,8 @@ import { SecretsFileProvider } from "./secrets-file-provider";
 import { decrypt } from "./decrypt";
 import totp from "totp-generator";
 import { IContent } from "./types";
+import { Worker } from "worker_threads";
+import path from "path";
 
 export interface ServiceInformation {
   issuer: string;
@@ -14,33 +16,38 @@ export interface Otp {
   remainingMs: number;
 }
 
+type WorkerJob = any;
+
+async function runWorkerJob(job: WorkerJob) {
+  const worker = new Worker(path.resolve(__dirname, "./otp-generator-v2.js"), {
+    workerData: job,
+  });
+  const p = new Promise((resolve, reject) => {
+    worker.addListener("message", resolve);
+    worker.addListener("error", reject);
+    worker.addListener("messageerror", reject);
+  });
+  return p;
+}
+
 export class OtpGenerator {
-  private services: IContent = null;
+  private encryptedBackup: IEncryptedBackup | null = null;
 
   constructor(private secretsFileProvider: SecretsFileProvider) {}
 
   async unlock(password: string): Promise<void> {
-    this.services = await decrypt(
-      password,
-      this.secretsFileProvider.getContents()
-    );
+    this.encryptedBackup = this.secretsFileProvider.getContents();
   }
 
   lock(): void {
-    this.services = null;
+    this.encryptedBackup = null;
   }
 
   isUnlocked(): boolean {
-    return this.services != null;
+    return this.encryptedBackup != null;
   }
 
   listServices(): ServiceInformation[] {
-    // return [
-    //   {label: "root@1234567890", issuer: "AWS", thumbnail: ""},
-    //   {label: "user.name1", issuer: "Facebook", thumbnail: ""},
-    //   {label: "example@gmail.com", issuer: "Google", thumbnail: ""},
-    //   {label: "example@gmail.com", issuer: "Amazon", thumbnail: ""},
-    // ];
     return this.services.entries.map((s) => ({
       issuer: s.issuer,
       label: s.name,
