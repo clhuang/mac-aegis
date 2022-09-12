@@ -7,13 +7,11 @@ and produce TOTP codes from the system tray.
 
 #### Security warning
 
-This app is a compromise between security and convenience. The secrets are encrypted
-at rest in Aegis's file format, and require a password to decrypt
-when the app first starts. After that, they remain in plain text in the program's memory.
-The app asks for Touch ID before generating any OTPs, but this can probably be bypassed
-by a determined attacker because it doesn't actually store any secret in the secure enclave.
-
-Having said that, it's still better than no 2FA at all.
+The secrets are encrypted at rest in Aegis's file format, and require a password to decrypt
+when the app first starts. After that, entry metadata (but not the seeds) are stored in memory,
+while the master encryption key is encrypted with an ephemeral in-memory key and stored in the keychain.
+All operations involving secrets are done inside of an ephemeral worker thread to avoid secrets being stored in memory,
+with one exception being the password loaded on startup (which should be garbage collected shortly).
 
 ### Develop
 
