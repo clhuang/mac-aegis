@@ -14,7 +14,7 @@
   "license": "GPLV3",
   "dependencies": {
     "electron-store": "^7.0.2",
-    "node-mac-auth": "^1.0.0",
+    "node-mac-auth": "github:clhuang/node-mac-auth",
     "prompts": "^2.4.2",
     "totp-generator": "^0.0.9"
   },
