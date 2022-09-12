@@ -1,9 +1,8 @@
 import { SecretsFileProvider } from "./secrets-file-provider";
-import { decrypt } from "./decrypt";
-import totp from "totp-generator";
-import { IContent } from "./types";
+import { IEncryptedBackup } from "./types";
 import { Worker } from "worker_threads";
 import path from "path";
+import crypto from "crypto";
 
 export interface ServiceInformation {
   issuer: string;
@@ -16,9 +15,35 @@ export interface Otp {
   remainingMs: number;
 }
 
-type WorkerJob = any;
+interface IWorkerInit {
+  type: "init";
+  backup: IEncryptedBackup;
+  password: string;
+  ephemeralKey: string;
+}
 
-async function runWorkerJob(job: WorkerJob) {
+interface IWorkerGenOTP {
+  type: "genotp";
+  issuer: string;
+  label: string;
+  backup: IEncryptedBackup;
+  ephemeralKey: string;
+}
+
+interface IWorkerGenOTPResponse extends Otp {
+  serviceList: ServiceInformation[];
+}
+
+interface IWorkerInitResponse {
+  serviceList: ServiceInformation[];
+}
+
+export type WorkerJob = IWorkerInit | IWorkerGenOTP;
+export type WorkerResponse = IWorkerInitResponse | IWorkerGenOTPResponse;
+
+async function runWorkerJob(job: IWorkerInit): Promise<IWorkerInitResponse>;
+async function runWorkerJob(job: IWorkerGenOTP): Promise<IWorkerGenOTPResponse>;
+async function runWorkerJob(job: WorkerJob): Promise<WorkerResponse> {
   const worker = new Worker(path.resolve(__dirname, "./otp-generator-v2.js"), {
     workerData: job,
   });
@@ -27,16 +52,26 @@ async function runWorkerJob(job: WorkerJob) {
     worker.addListener("error", reject);
     worker.addListener("messageerror", reject);
   });
-  return p;
+  return p as any;
 }
 
 export class OtpGenerator {
   private encryptedBackup: IEncryptedBackup | null = null;
+  private services: ServiceInformation[] = [];
+  private ephemeralKey: string | null = null;
 
   constructor(private secretsFileProvider: SecretsFileProvider) {}
 
   async unlock(password: string): Promise<void> {
     this.encryptedBackup = this.secretsFileProvider.getContents();
+    this.ephemeralKey = crypto.randomBytes(32).toString("hex");
+    const { serviceList } = await runWorkerJob({
+      type: "init",
+      backup: this.encryptedBackup,
+      password,
+      ephemeralKey: this.ephemeralKey,
+    });
+    this.services = serviceList;
   }
 
   lock(): void {
@@ -48,52 +83,18 @@ export class OtpGenerator {
   }
 
   listServices(): ServiceInformation[] {
-    return this.services.entries.map((s) => ({
-      issuer: s.issuer,
-      label: s.name,
-      thumbnail: s.icon,
-    }));
+    return this.services;
   }
 
   async generateOTP(issuer: string, label: string): Promise<Otp> {
-    const service = this.services.entries.find(
-      (s) => s.issuer === issuer && s.name === label
-    );
-    if (service == null) {
-      throw new Error("Service not found");
-    }
-
-    const period = service.info.period ?? 30;
-
-    const otp = totp(service.info.secret, {
-      digits: service.info.digits,
-      algorithm: this.translateHashAlgorithm(service.info.algo),
-      period,
+    const { serviceList, otp, remainingMs } = await runWorkerJob({
+      type: "genotp",
+      backup: this.encryptedBackup,
+      issuer,
+      label,
+      ephemeralKey: this.ephemeralKey,
     });
-    return {
-      otp,
-      remainingMs: this.expiresIn(period),
-    };
-  }
-
-  private translateHashAlgorithm(format: string = "SHA-1"): string {
-    switch (format) {
-      case "SHA1":
-        return "SHA-1";
-      case "SHA256":
-        return "SHA-256";
-      case "SHA512":
-        return "SHA-512";
-      default:
-        return format;
-    }
-  }
-
-  private expiresIn(period: number): number {
-    const periodMs = period * 1000;
-    const epoch = Date.now();
-    const elapsed = epoch % periodMs;
-    const remaining = periodMs - elapsed;
-    return remaining;
+    this.services = serviceList;
+    return { otp, remainingMs };
   }
 }
