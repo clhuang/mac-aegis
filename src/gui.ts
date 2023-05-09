@@ -41,10 +41,13 @@ export class GUI {
         { label: "2FA unlocked", enabled: false },
         { label: "Lock...", click: () => this.lock() },
         { type: "separator" },
-        ...this.otpGenerator.listServices().map((s) => ({
-          label: `${s.issuer} – ${s.label}`,
-          click: () => this.authenticateAndCopyOtp(s),
-        }))
+        ...this.otpGenerator
+          .listServices()
+          .map((s) => ({
+            label: `${s.issuer} – ${s.label}`,
+            click: () => this.authenticateAndCopyOtp(s),
+          }))
+          .sort(({ label: a }, { label: b }) => (a > b ? 1 : a < b ? -1 : 0))
       );
     } else {
       items.push(
