@@ -99,10 +99,12 @@ async function retrieveMasterKey(ephemeralKey: Buffer): Promise<Buffer> {
 }
 
 function getServiceList(serviceInfo: IContent) {
+  const groupMap = new Map(serviceInfo.groups.map(group => [group.uuid, group.name]));
   return serviceInfo.entries.map((x) => ({
     issuer: x.issuer,
     label: x.name,
     thubnail: x.icon,
+    groups: x.groups.map(groupId => groupMap.get(groupId) || "Unknown Group").filter(x => x),
   }));
 }
 

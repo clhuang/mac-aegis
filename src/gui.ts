@@ -40,15 +40,34 @@ export class GUI {
       items.push(
         { label: "2FA unlocked", enabled: false },
         { label: "Lock...", click: () => this.lock() },
-        { type: "separator" },
-        ...this.otpGenerator
-          .listServices()
-          .map((s) => ({
-            label: `${s.issuer} – ${s.label}`,
-            click: () => this.authenticateAndCopyOtp(s),
-          }))
-          .sort(({ label: a }, { label: b }) => (a > b ? 1 : a < b ? -1 : 0))
+        { type: "separator" }
       );
+
+      const groupedServices = this.otpGenerator.listServices().reduce((acc, service) => {
+        service.groups.forEach(group => {
+          acc[group] = acc[group] || [];
+          acc[group].push({
+            label: `${service.issuer} – ${service.label}`,
+            click: () => this.authenticateAndCopyOtp(service),
+          });
+        });
+        return acc;
+      }, {});
+
+      Object.keys(groupedServices).forEach(group => {
+        items.push({
+          label: group,
+          submenu: groupedServices[group].sort(({ label: a }, { label: b }) => (a > b ? 1 : a < b ? -1 : 0))
+        });
+      });
+
+      items.push({
+        label: "All",
+        submenu: this.otpGenerator.listServices().map(service => ({
+          label: `${service.issuer} – ${service.label}`,
+          click: () => this.authenticateAndCopyOtp(service),
+        })).sort(({ label: a }, { label: b }) => (a > b ? 1 : a < b ? -1 : 0))
+      });
     } else {
       items.push(
         { label: "2FA locked", enabled: false },

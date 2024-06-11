@@ -8,6 +8,7 @@ export interface ServiceInformation {
   issuer: string;
   label: string;
   thumbnail: string;
+  groups: string[];
 }
 
 export interface Otp {

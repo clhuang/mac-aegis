@@ -47,6 +47,11 @@ export interface IContent {
       digits?: number;
       period?: number;
     };
+    groups: string[]; // Array of group UUIDs this entry belongs to
+  }[];
+  groups: {
+    uuid: string;
+    name: string;
   }[];
 }
 
